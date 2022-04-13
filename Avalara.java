@@ -25,4 +25,8 @@ public class Avalara {
 		this.description = description;
 	}
 
+	public String toString() {
+		return taxCode + "," + description;
+	}
+
 }
