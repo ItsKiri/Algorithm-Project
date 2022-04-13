@@ -26,8 +26,7 @@ public class Result extends Avalara {
 
 	@Override
 	public String toString() {
-		return "\"" + commodityTitle + "\"" + ", " + commodityID + ", " + getTaxCode() + ", " + "\"" + getDescription()
-				+ "\"";
+		return commodityTitle + "," + commodityID + "," + getTaxCode() + "," + getDescription();
 	}
 
 }
