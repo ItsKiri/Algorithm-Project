@@ -86,4 +86,10 @@ public class Data {
 		this.commodityID = commodityID;
 	}
 
+	@Override
+	public String toString() {
+		return segmentTitle + "," + segmentID + "," + familyTitle + "," + familyID + "," + classTitle + "," + classID
+				+ "," + commodityTitle + "," + commodityID;
+	}
+
 }
