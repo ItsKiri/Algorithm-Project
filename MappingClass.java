@@ -32,10 +32,10 @@ public class MappingClass {
 			int index = 0;
 			int maxPercentage = 0;
 
-			String title = modifyString(avalara.getDescription());
+			String title = modifyString(avalara.getDescription()).toLowerCase();
 			for (int i = 0; i < classList.size(); i++) {
 				Class classNode = classList.get(i);
-				int percentage = lock_match(classNode.getClassTitle(), title);
+				int percentage = lock_match(title, classNode.getClassTitle().toLowerCase());
 				if (percentage > maxPercentage) {
 					maxPercentage = percentage;
 					index = i;
@@ -47,7 +47,7 @@ public class MappingClass {
 			maxPercentage = 0;
 			for (int i = 0; i < commodityList.size(); i++) {
 				Commodity commodityNode = commodityList.get(i);
-				int percentage = lock_match(commodityNode.getCommodityTitle(), title);
+				int percentage = lock_match(title, commodityNode.getCommodityTitle().toLowerCase());
 				if (percentage > maxPercentage) {
 					maxPercentage = percentage;
 					index = i;
