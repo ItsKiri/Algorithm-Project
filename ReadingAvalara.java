@@ -1,7 +1,11 @@
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 
 public class ReadingAvalara {
@@ -24,26 +28,18 @@ public class ReadingAvalara {
 		this.avalaraList = avalaraList;
 	}
 
-	public ArrayList<Avalara> readCSV(String filename) {
+	public ArrayList<Avalara> readCSV(String fileName) {
 		ArrayList<String> list = new ArrayList<>();
 
 		try {
 			@SuppressWarnings("resource")
-			BufferedReader reader = new BufferedReader(new FileReader(filename));
-			reader.readLine();
+			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName), "UTF-8"));
 			String line = null;
 			while ((line = reader.readLine()) != null) {
 				list.add(line);
 			}
 			for (String row : list) {
-				String[] strings = row.trim().split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)", -1);
-				for (int i = 0; i < strings.length; i++) {
-					if (strings[i].startsWith("\""))
-						strings[i] = strings[i].substring(1, strings[i].length());
-					if (strings[i].endsWith("\""))
-						strings[i] = strings[i].substring(0, strings[i].length() - 1);
-					strings[i] = strings[i].replaceAll("\"\"", "\"");
-				}
+				String[] strings = row.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
 
 				if (strings.length >= 2 && strings[0] != "") {
 					Avalara avalara = new Avalara(strings[0], strings[1]);
@@ -58,6 +54,29 @@ public class ReadingAvalara {
 			e.printStackTrace();
 		}
 		return avalaraList;
+
+	}
+
+	public String constructResults() {
+		StringBuilder stringBuilder = new StringBuilder();
+		for (Avalara line : avalaraList) {
+			stringBuilder.append(line.toString() + "\n");
+		}
+		return stringBuilder.toString();
+	}
+
+	public void print(String fileName) {
+		FileOutputStream fos;
+		try {
+			fos = new FileOutputStream(fileName);
+			Writer out = new OutputStreamWriter(fos, "UTF-8");
+			out.write(constructResults());
+			out.close();
+			fos.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 	}
 
