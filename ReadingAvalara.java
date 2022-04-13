@@ -35,6 +35,7 @@ public class ReadingAvalara {
 			@SuppressWarnings("resource")
 			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName), "UTF-8"));
 			String line = null;
+			reader.readLine();
 			while ((line = reader.readLine()) != null) {
 				list.add(line);
 			}
