@@ -88,8 +88,8 @@ public class Data {
 
 	@Override
 	public String toString() {
-		return segmentTitle + "," + segmentID + "," + familyTitle + "," + familyID + "," + classTitle + "," + classID
-				+ "," + commodityTitle + "," + commodityID;
+		return segmentTitle + " " + segmentID + " " + familyTitle + " " + familyID + " " + classTitle + " " + classID
+				+ " " + commodityTitle + " " + commodityID;
 	}
 
 }
