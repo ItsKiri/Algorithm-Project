@@ -27,7 +27,7 @@ public class MappingClass {
 		this.resultList = resultList;
 	}
 
-	public ArrayList<Result> mapping(ArrayList<Class> classList, ArrayList<Avalara> avalaraList) {
+	public void mapping(ArrayList<Class> classList, ArrayList<Avalara> avalaraList) {
 		for (Avalara avalara : avalaraList) {
 			int index = 0;
 			int maxPercentage = 0;
@@ -59,7 +59,7 @@ public class MappingClass {
 			resultList.add(result);
 
 		}
-		return resultList;
+
 	}
 
 	public String constructResults() {
