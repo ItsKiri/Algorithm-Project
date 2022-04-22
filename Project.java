@@ -5,7 +5,7 @@ public class Project {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		ReadingUNSPSC readUNSPSC = new ReadingUNSPSC();
-		ArrayList<Data> dataList = readUNSPSC.readCSV(".\\src\\UNSPSC_English.csv");
+		ArrayList<Data> dataList = readUNSPSC.readCSV("D:\\java\\workspace\\5800 Algorithm\\src\\UNSPSC_English.csv");
 		System.out.println(dataList.size());
 		CreateTree createTree = new CreateTree();
 		createTree.insert(dataList);
@@ -32,12 +32,13 @@ public class Project {
 		System.out.println(classList.size());
 
 		ReadingAvalara readAvalara = new ReadingAvalara();
-		ArrayList<Avalara> avalaraList = readAvalara.readCSV(".\\src\\Avalara_goods_and_services.csv");
+		ArrayList<Avalara> avalaraList = readAvalara
+				.readCSV("D:\\java\\workspace\\5800 Algorithm\\src\\Avalara_goods_and_services.csv");
 		System.out.println(avalaraList.size());
 
 		MappingClass mappingClass = new MappingClass();
-		mappingClass.mapping(classList, avalaraList);
-		mappingClass.print(".\\src\\results.csv");
+		mappingClass.mapping(classList, avalaraList, tree);
+		mappingClass.print("D:\\java\\workspace\\5800 Algorithm\\results6.csv");
 	}
 
 }

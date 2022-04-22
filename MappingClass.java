@@ -3,6 +3,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,7 +29,7 @@ public class MappingClass {
 		this.resultList = resultList;
 	}
 
-	public void mapping(ArrayList<Class> classList, ArrayList<Avalara> avalaraList) {
+	public void mapping(ArrayList<Class> classList, ArrayList<Avalara> avalaraList, UNSPSC tree) {
 		for (Avalara avalara : avalaraList) {
 			int index = 0;
 			int maxPercentage = 0;
@@ -35,7 +37,7 @@ public class MappingClass {
 			String title = modifyString(avalara.getDescription()).toLowerCase();
 			for (int i = 0; i < classList.size(); i++) {
 				Class classNode = classList.get(i);
-				int percentage = lock_match(title, classNode.getClassTitle().toLowerCase());
+				int percentage = commonWordsCount(title, classNode.getClassTitle().toLowerCase());
 				if (percentage > maxPercentage) {
 					maxPercentage = percentage;
 					index = i;
@@ -47,16 +49,59 @@ public class MappingClass {
 			maxPercentage = 0;
 			for (int i = 0; i < commodityList.size(); i++) {
 				Commodity commodityNode = commodityList.get(i);
-				int percentage = lock_match(title, commodityNode.getCommodityTitle().toLowerCase());
+				title = commodityModification(title);
+
+				int percentage = 0;
+
+				percentage = commonWordsCount(title, commodityNode.getCommodityTitle().toLowerCase());
+
 				if (percentage > maxPercentage) {
 					maxPercentage = percentage;
 					index = i;
 				}
 			}
-			Commodity treeCommodity = commodityList.get(index);
-			Result result = new Result(avalara.getTaxCode(), avalara.getDescription(),
-					treeCommodity.getCommodityTitle(), treeCommodity.getCommodityID());
-			resultList.add(result);
+			if (maxPercentage == 0) {
+				title = modifyString(avalara.getDescription()).toLowerCase();
+				int segmentIndex = 0;
+				int familyIndex = 0;
+				int classIndex = 0;
+				int commodityIndex = 0;
+
+				for (int i = 0; i < tree.getSegmentNodes().size(); i++) {
+					Segment treeSegment = tree.getSegmentNodes().get(i);
+					for (int j = 0; j < treeSegment.getFamilyNodes().size(); j++) {
+						Family treeFamily = treeSegment.getFamilyNodes().get(j);
+						for (int k = 0; k < treeFamily.getClassNodes().size(); k++) {
+							Class treeClass = treeFamily.getClassNodes().get(k);
+							for (int l = 0; l < treeClass.getCommodityNodes().size(); l++) {
+								Commodity treeCommodity = treeClass.getCommodityNodes().get(l);
+								int percentage = commonWordsCount(title,
+										treeCommodity.getCommodityTitle().toLowerCase());
+								if (percentage > maxPercentage) {
+									maxPercentage = percentage;
+									segmentIndex = i;
+									familyIndex = j;
+									classIndex = k;
+									commodityIndex = l;
+
+								}
+							}
+						}
+					}
+				}
+				Commodity correctCommodity = tree.getSegmentNodes().get(segmentIndex).getFamilyNodes().get(familyIndex)
+						.getClassNodes().get(classIndex).getCommodityNodes().get(commodityIndex);
+				Result result = new Result(avalara.getTaxCode(), title, correctCommodity.getCommodityTitle(),
+						correctCommodity.getCommodityID());
+				resultList.add(result);
+
+			} else {
+				Commodity treeCommodity = commodityList.get(index);
+				Result result = new Result(avalara.getTaxCode(), title, treeCommodity.getCommodityTitle(),
+						treeCommodity.getCommodityID());
+				resultList.add(result);
+
+			}
 
 		}
 
@@ -85,203 +130,252 @@ public class MappingClass {
 
 	}
 
-	private static int lock_match(String s, String t) {
+	private String commodityModification(String avalara) {
+		String modified = avalara;
+		if (modified.indexOf("clothing accessories ") != -1)
+			modified = modified.replaceAll("clothing accessories ", "").trim();
+		if (modified == "" || modified.length() == 0)
+			return "empty";
 
-		int totalw = word_count(s);
-		int total = 100;
-		int perw = total / totalw;
-		int gotperw = 0;
-
-		if (!s.equals(t)) {
-
-			for (int i = 1; i <= totalw; i++) {
-				if (simple_match(split_string(s, i), t) == 1) {
-					gotperw = ((perw * (total - 10)) / total) + gotperw;
-				} else if (front_full_match(split_string(s, i), t) == 1) {
-					gotperw = ((perw * (total - 20)) / total) + gotperw;
-				} else if (anywhere_match(split_string(s, i), t) == 1) {
-					gotperw = ((perw * (total - 30)) / total) + gotperw;
-				} else {
-					gotperw = ((perw * smart_match(split_string(s, i), t)) / total) + gotperw;
-				}
-			}
-		} else {
-			gotperw = 100;
-		}
-		return gotperw;
+		return modified;
 	}
 
-	private static int anywhere_match(String s, String t) {
-		int x = 0;
-		if (t.contains(s)) {
-			x = 1;
+	private String addSynonyms(String s) {
+
+		if (s.toLowerCase().contains("digital")) {
+			s = s + " electrical print";
 		}
-		return x;
+		if (s.toLowerCase().contains("digital audio works")) {
+			s = s + " integrated circuits workstation";
+		}
+		if (s.toLowerCase().contains("digital books")) {
+			s = s + " Business use papers";
+		}
+		if (s.toLowerCase().contains("computer software")) {
+			s = s + " licensing rental or leasing service";
+		}
+		if (s.toLowerCase().contains("system software")) {
+			s = s + " maintenance and support";
+		}
+		if (s.toLowerCase().contains("cloud")) {
+			s = s + " infrastructure";
+		}
+		if (s.toLowerCase().contains("gift")) {
+			s = s + " Novelty certificate";
+		}
+		if (s.toLowerCase().contains("digital image")) {
+			s = s + " printers Audio visual equipment";
+		}
+		if (s.toLowerCase().contains("digital magazines")) {
+			s = s + " Electronic publications";
+		}
+		if (s.toLowerCase().contains("mailing lists")) {
+			s = s + " services";
+		}
+		if (s.toLowerCase().contains("movies")) {
+			s = s + " entertainment theatre Film";
+		}
+		if (s.toLowerCase().contains("streaming")) {
+			s = s + " equipment";
+		}
+		if (s.toLowerCase().contains("newspaper")) {
+			s = s + " publication";
+		}
+		if (s.toLowerCase().contains("photograph")) {
+			s = s + " art";
+		}
+		if (s.toLowerCase().contains("media")) {
+			s = s + " storage";
+		}
+		if (s.toLowerCase().contains("vehicle")) {
+			s = s + " transport";
+		}
+		if (s.toLowerCase().contains("international")) {
+			s = s + " air freight";
+		}
+		if (s.toLowerCase().contains("concert")) {
+			s = s + " performance";
+		}
+		if (s.toLowerCase().contains("adult")) {
+			s = s + " club night";
+		}
+		if (s.toLowerCase().contains("coupons")) {
+			s = s + " paper";
+		}
+		if (s.toLowerCase().contains("sales") || s.toLowerCase().contains("fees")) {
+			s = s + " tax";
+		}
+		if (s.toLowerCase().contains("plant")) {
+			s = s + " tree shrub";
+		}
+		if (s.toLowerCase().contains("containers")) {
+			s = s + " storage equipment";
+		}
+		if (s.toLowerCase().contains("drink")) {
+			s = s + " alcohol ";
+		}
+		if (s.toLowerCase().contains("tire")) {
+			s = s + " tube ";
+		}
+		if (s.toLowerCase().contains("bicycle")) {
+			s = s + " vehicle ";
+		}
+		if (s.toLowerCase().contains("books")) {
+			s = s + " printed ";
+		}
+		if (s.toLowerCase().contains("battery")) {
+			s = s + " cell ";
+		}
+
+		if (s.toLowerCase().contains("carpet")) {
+			s = " rugs mat " + s;
+		}
+		if (s.toLowerCase().contains("child")) {
+			s = " infant toddler baby " + s;
+		}
+		if (s.toLowerCase().contains("and related products")) {
+			s = s.replaceAll("and related products", "accessories");
+		}
+		if (s.toLowerCase().contains("ear")) {
+			s = " hearing " + s;
+		}
+		if (s.toLowerCase().contains("foot lets")) {
+			s = " hoisery socks " + s;
+		}
+		if (s.toLowerCase().contains("sheepskin")) {
+			s = " leather " + s;
+		}
+		if (s.toLowerCase().contains("fur")) {
+			s = " leather sheep" + s;
+		}
+		if (s.toLowerCase().contains("golf clothing")) {
+			s = " gloves " + s;
+		}
+		if (s.toLowerCase().contains("insole")) {
+			s = " Ergonomic " + s;
+		}
+		if (s.toLowerCase().contains("pantyhose") || s.toLowerCase().contains("socks and stocking")) {
+			s = " hoisery " + s;
+		}
+		if (s.toLowerCase().contains("poncho")) {
+			s = " coat jacket " + s;
+		}
+		if (s.toLowerCase().contains("rainwear") || s.toLowerCase().contains("protective")) {
+			s = " safety " + s;
+		}
+		if (s.toLowerCase().contains("scarves") || s.toLowerCase().contains("suspender")
+				|| s.toLowerCase().contains("handkerchiefs") || s.toLowerCase().contains("umbrellas")
+				|| s.toLowerCase().contains("sweatbands")) {
+			s = " clothing " + s;
+		}
+		if (s.toLowerCase().contains("underwear")) {
+			s = " undergarment " + s;
+		}
+		if (s.toLowerCase().contains("aqua")) {
+			s = " water " + s;
+		}
+		if (s.toLowerCase().contains("shoe")) {
+			s = " footwear " + s;
+		}
+		if (s.toLowerCase().contains("blanket")) {
+			s = " night " + s;
+		}
+		if (s.toLowerCase().contains("costume")) {
+			s = " drama play " + s;
+		}
+		if (s.toLowerCase().contains("briefcase")) {
+			s = " business " + s;
+		}
+		if (s.toLowerCase().contains("cosmetic") || s.toLowerCase().contains("hair")
+				|| s.toLowerCase().contains("shower")) {
+			s = " bath body " + s;
+		}
+		if (s.toLowerCase().contains("handbag")) {
+			s = " purse bag" + s;
+		}
+		if (s.toLowerCase().contains("sunglass")) {
+			s = " vision eye" + s;
+		}
+		if (s.toLowerCase().contains("wallet")) {
+			s = " cash " + s;
+		}
+		if (s.toLowerCase().contains("wet")) {
+			s = " scuba " + s;
+		}
+		if (s.toLowerCase().contains("belt") || s.toLowerCase().contains("buckle")) {
+			s = " sewing " + s;
+		}
+		if (s.toLowerCase().contains("mask")) {
+			s = " respiration protection " + s;
+		}
+		if (s.toLowerCase().contains("helmet")) {
+			s = " head protection " + s;
+		}
+		if (s.toLowerCase().contains("safety")) {
+			s = " protection equipment " + s;
+		}
+		if (s.toLowerCase().contains("gloves")) {
+			s = " apparel " + s;
+		}
+		if (s.toLowerCase().contains("ski")) {
+			s = " skiing snow " + s;
+		}
+		if (s.toLowerCase().contains("athletic")) {
+			s = " sports " + s;
+		}
+		if (s.toLowerCase().contains("swim")) {
+			s = " surf " + s;
+		}
+		if (s.toLowerCase().contains("footwear")) {
+			s = " shoes " + s;
+		}
+
+		return s;
+
 	}
 
-	private static int front_full_match(String s, String t) {
-		int x = 0;
-		String tempt;
-		int len = s.length();
+	private String removeStrings(String s) {
 
-		// ----------Work Body----------//
-		for (int i = 1; i <= word_count(t); i++) {
-			tempt = split_string(t, i);
-			if (tempt.length() >= s.length()) {
-				tempt = tempt.substring(0, len);
-				if (s.contains(tempt)) {
-					x = 1;
-					break;
-				}
-			}
-		}
-		// ---------END---------------//
-		if (len == 0) {
-			x = 0;
-		}
-		return x;
+		s = s.replaceAll("\\((business-to-business)\\) ?", "");
+		s = s.replaceAll("\\((business-to-customer)\\) ?", "");
+		return s;
 	}
 
-	private static int simple_match(String s, String t) {
-		int x = 0;
-		String tempt;
-		int len = s.length();
+	private String modifyString(String s) {
 
-		// ----------Work Body----------//
-		for (int i = 1; i <= word_count(t); i++) {
-			tempt = split_string(t, i);
-			if (tempt.length() == s.length()) {
-				if (s.contains(tempt)) {
-					x = 1;
-					break;
-				}
-			}
-		}
-		// ---------END---------------//
-		if (len == 0) {
-			x = 0;
-		}
-		return x;
-	}
-
-	private static int smart_match(String ts, String tt) {
-
-		char[] s = new char[ts.length()];
-		s = ts.toCharArray();
-		char[] t = new char[tt.length()];
-		t = tt.toCharArray();
-
-		int slen = s.length;
-		// number of 3 combinations per word//
-		int combs = (slen - 3) + 1;
-		// percentage per combination of 3 characters//
-		int ppc = 0;
-		if (slen >= 3) {
-			ppc = 100 / combs;
-		}
-		// initialising an integer to store the total % this class genrate//
-		int x = 0;
-		// declaring a temporary new source char array
-		char[] ns = new char[3];
-		// check if source char array has more then 3 characters//
-		if (slen < 3) {
-		} else {
-			for (int i = 0; i < combs; i++) {
-				for (int j = 0; j < 3; j++) {
-					ns[j] = s[j + i];
-				}
-				if (cross_full_match(ns, t) == 1) {
-					x = x + 1;
-				}
-			}
-		}
-		x = ppc * x;
-		return x;
-	}
-
-	/**
-	 *
-	 * @param s
-	 * @param t
-	 * @return
-	 */
-	private static int cross_full_match(char[] s, char[] t) {
-		int z = t.length - s.length;
-		int x = 0;
-		if (s.length > t.length) {
-			return x;
-		} else {
-			for (int i = 0; i <= z; i++) {
-				for (int j = 0; j <= (s.length - 1); j++) {
-					if (s[j] == t[j + i]) {
-						// x=1 if any charecer matches
-						x = 1;
-					} else {
-						// if x=0 mean an character do not matches and loop break out
-						x = 0;
-						break;
-					}
-				}
-				if (x == 1) {
-					break;
-				}
-			}
-		}
-		return x;
-	}
-
-	private static String split_string(String s, int n) {
-
-		int index;
-		String temp;
-		temp = s;
-		String temp2 = null;
-
-		int temp3 = 0;
-
-		for (int i = 0; i < n; i++) {
-			int strlen = temp.length();
-			index = temp.indexOf(" ");
-			if (index < 0) {
-				index = strlen;
-			}
-			temp2 = temp.substring(temp3, index);
-			temp = temp.substring(index, strlen);
-			temp = temp.trim();
-
-		}
-		return temp2;
-	}
-
-	private static int word_count(String s) {
-		int x = 1;
-		int c;
-		s = s.trim();
-		if (s.isEmpty()) {
-			x = 0;
-		} else {
-			if (s.contains(" ")) {
-				for (;;) {
-					x++;
-					c = s.indexOf(" ");
-					s = s.substring(c);
-					s = s.trim();
-					if (s.contains(" ")) {
-					} else {
-						break;
-					}
-				}
-			}
-		}
-		return x;
-	}
-
-	private static String modifyString(String s) {
+		String cleanedString = removeStrings(s);
+		String synonymString = addSynonyms(cleanedString);
+		String modified = synonymString.replaceAll("[()]", "").replaceAll("[-+.^:/*,]", " ");
 		Pattern p = Pattern.compile(
-				"\\b(&|-|I|I've|&|:|%|=|unknown|includes|required|supporters|related|including|limited|mixed|tone|entirely|Reimbursed|installation|associated|etc|measurable|paid|tangible|personal|property|stated|charges|sale|municipally|privately|owned|separately|combined|contract|option|see additional avatax system tax code information|streamed|similar|access|see additional code description|partly|covered|seen|a|about|above|across|after|again|against|all|almost|alone|along|already|also|although|always|among|an|and|another|any|anybody|anyone|anything|anywhere|are|area|areas|around|as|ask|asked|asking|asks|at|away|b|back|backed|backing|backs|be|became|because|become|becomes|been|before|began|behind|being|beings|best|better|between|big|both|but|by|By|c|containing|came|can|cannot|case|cases|certain|certainly|clear|clearly|come|could|d|did|differ|different|differently|do|does|done|down|down|download|downloaded|downed|downing|downs|during|e|each|early|either|end|ended|ending|ends| enough|even|evenly|ever|every|everybody|everyone|everything|everywhere|f|face|faces|fact|facts|far|felt|few|find|finds|first|for|four|from|full|fully|further|furthered|furthering|furthers|g|gave|general|generally|get|gets|give|given|gives|go|going|good|got|great|greater|greatest|group|grouped|grouping|groups|h|had|has|have|having|he|her|here|herself|high|high|high|higher|highest|him|himself|his|how|however|i|if|important|in|interest|interested|intended|interesting|interests|into|is|it|its|itself|j|just|k|keep|keeps|kind|knew|know|known|knows|l| large|largely|last|later|latest|least|leave|less|let|lets|like|likely|load|long|longer|longest|m|meets|made|make|making|man|many|may|me|member|members|men|might|more|most|mostly|mr|mrs|much|must|my|myself|n|necessary|need|needed|needing|needs|never|new|new|newer|newest|next|no|nobody|non|noone|not|nothing|now| nowhere|number|numbers|o|of|off|often|old|older|oldest|on|once|one|only|open|opened|opening|opens|or|order|ordered|ordering|orders|other|others|our|out|over|p|part|parted|parting|parts|per|perhaps|place|places|point|pointed|pointing|points|possible|present|previously|purchased|presented|presenting|presents|problem|problems|put|puts|q|quite|r|required|rather|really|right|right|room|rooms|s|said|same|saw|say|says|second|seconds|see|seem|seemed|seeming|seems|sees|several|shall|she|should|show|showed|showing|shows|side|sides|since|sold|small|smaller|smallest|so|some|somebody|someone|something|somewhere|state|states|still|still|such|sure|t|to|take|taken|than|that|the|their|them|then|there|therefore|these|they|thing|things|think|thinks|this|those|though|thought|thoughts|three|through|thus|to|today|together|too|took|toward|turn|turned|turning|turns|two|u|users|under|until|up|upon|us|use|used|user|uses|v|via|very|w|want|wanted|wanting|wants|was|way|ways|we|well|wells|went|were|what|when|where|whether|which|while|who|whole|whose|why|will|with|within|without|work|worked|working|works|would|x|y|year|years|yet|you|young|younger|youngest|your|yours.....)\\b\\s?");
-		Matcher m = p.matcher(s);
-		String modifiedString = m.replaceAll("").replaceAll("\\([^()]*\\)", "").replaceAll("[-+.^:/*,]", "");
+				"\\b(&|I|I've|&|:|%|=|unknown|includes|required|supporters|related|including|limited|mixed|tone|entirely|Reimbursed|installation|associated|etc|measurable|paid|tangible|personal|property|stated|charges|sale|municipally|privately|owned|separately|combined|contract|option|see additional avatax system tax code information|streamed|similar|access|see additional code description|partly|covered|seen|a|about|above|across|after|again|against|all|almost|alone|along|already|also|although|always|among|an|and|another|any|anybody|anyone|anything|anywhere|are|area|areas|around|as|ask|asked|asking|asks|at|away|b|back|backed|backing|backs|be|became|because|become|becomes|been|before|began|behind|being|beings|best|better|between|big|both|but|by|By|c|containing|came|can|cannot|case|cases|certain|certainly|clear|clearly|come|could|d|did|differ|different|differently|do|does|done|down|down|download|downloaded|downed|downing|downs|during|e|each|early|either|end|ended|ending|ends| enough|even|evenly|ever|every|everybody|everyone|everything|everywhere|f|face|faces|fact|facts|far|felt|few|find|finds|first|for|four|from|full|fully|further|furthered|furthering|furthers|g|gave|general|generally|get|gets|give|given|gives|go|going|good|got|great|greater|greatest|group|grouped|grouping|groups|h|had|has|have|having|he|her|here|herself|high|high|high|higher|highest|him|himself|his|how|however|i|if|important|in|interest|interested|intended|interesting|interests|into|is|it|its|itself|j|just|k|keep|keeps|kind|knew|know|known|knows|l| large|largely|last|later|latest|least|leave|less|let|lets|like|likely|load|long|longer|longest|m|meets|made|make|making|man|many|may|me|member|members|men|might|more|most|mostly|mr|mrs|much|must|my|myself|n|necessary|need|needed|needing|needs|never|new|new|newer|newest|next|no|nobody|non|noone|not|nothing|now| nowhere|number|numbers|o|of|off|often|old|older|oldest|on|once|one|only|open|opened|opening|opens|or|order|ordered|ordering|orders|other|others|our|out|over|p|part|parted|parting|parts|per|perhaps|place|places|point|pointed|pointing|points|possible|present|previously|purchased|presented|presenting|presents|problem|problems|put|puts|q|quite|r|required|rather|really|right|right|room|rooms|s|said|same|saw|say|says|second|seconds|see|seem|seemed|seeming|seems|sees|several|shall|she|should|show|showed|showing|shows|side|sides|since|sold|small|smaller|smallest|so|some|somebody|someone|something|somewhere|state|states|still|still|such|sure|t|to|take|taken|than|that|the|their|them|then|there|therefore|these|they|thing|things|think|thinks|this|those|though|thought|thoughts|three|through|thus|to|today|together|too|took|toward|turn|turned|turning|turns|two|u|users|under|until|up|upon|us|use|used|user|uses|v|via|very|w|want|wanted|wanting|wants|was|way|ways|we|well|wells|went|were|what|when|where|whether|which|while|who|whole|whose|why|will|with|within|without|work|worked|working|works|would|x|y|year|years|yet|you|young|younger|youngest|your|yours.....)\\b\\s?");
+		Matcher m = p.matcher(modified);
+		String modifiedString = m.replaceAll("");
 		return modifiedString;
+	}
+
+	private int commonWordsCount(String unspsc, String avalara) {
+
+		unspsc = unspsc.trim();
+		avalara = avalara.trim();
+		if (unspsc.length() == 0 || unspsc == "" || avalara.length() == 0 || avalara == "")
+			return 0;
+
+		int count = 0;
+		Set<String> set = new HashSet<>();
+		String[] strings = unspsc.split(" ");
+		for (String string : strings) {
+			if (!set.contains(string) && !set.contains(string + "s")) {
+				set.add(string);
+				set.add(string + "s");
+			}
+
+		}
+		for (String string : set) {
+			if (avalara.indexOf(string) != -1 || (avalara + "s").indexOf(string) != -1)
+				count++;
+		}
+
+		return count;
 	}
 
 }
