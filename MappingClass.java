@@ -31,35 +31,47 @@ public class MappingClass {
 
 	public void mapping(ArrayList<Class> classList, ArrayList<Avalara> avalaraList, UNSPSC tree) {
 		for (Avalara avalara : avalaraList) {
-			int index = 0;
+
 			int maxPercentage = 0;
+			ArrayList<Class> sameClass = new ArrayList<>();
 
 			String title = modifyString(avalara.getDescription()).toLowerCase();
 			for (int i = 0; i < classList.size(); i++) {
 				Class classNode = classList.get(i);
 				int percentage = commonWordsCount(title, classNode.getClassTitle().toLowerCase());
 				if (percentage > maxPercentage) {
+					sameClass.clear();
+					sameClass.add(classNode);
 					maxPercentage = percentage;
-					index = i;
-				}
+
+				} else if (percentage == maxPercentage)
+					sameClass.add(classNode);
 
 			}
-			ArrayList<Commodity> commodityList = classList.get(index).getCommodityNodes();
-			index = 0;
+			int sameClassIndex = 0;
+			int sameCommodityIndex = 0;
 			maxPercentage = 0;
-			for (int i = 0; i < commodityList.size(); i++) {
-				Commodity commodityNode = commodityList.get(i);
-				title = commodityModification(title);
+			for (int i = 0; i < sameClass.size(); i++) {
+				Class sameClassNode = sameClass.get(i);
+				ArrayList<Commodity> commodityList = sameClassNode.getCommodityNodes();
 
-				int percentage = 0;
+				for (int j = 0; j < commodityList.size(); j++) {
+					Commodity commodityNode = commodityList.get(j);
+					title = commodityModification(title);
 
-				percentage = commonWordsCount(title, commodityNode.getCommodityTitle().toLowerCase());
+					int percentage = 0;
 
-				if (percentage > maxPercentage) {
-					maxPercentage = percentage;
-					index = i;
+					percentage = commonWordsCount(title, commodityNode.getCommodityTitle().toLowerCase());
+
+					if (percentage > maxPercentage) {
+						maxPercentage = percentage;
+						sameClassIndex = i;
+						sameCommodityIndex = j;
+					}
 				}
+
 			}
+
 			if (maxPercentage == 0) {
 				title = modifyString(avalara.getDescription()).toLowerCase();
 				int segmentIndex = 0;
@@ -74,9 +86,12 @@ public class MappingClass {
 						for (int k = 0; k < treeFamily.getClassNodes().size(); k++) {
 							Class treeClass = treeFamily.getClassNodes().get(k);
 							for (int l = 0; l < treeClass.getCommodityNodes().size(); l++) {
+
 								Commodity treeCommodity = treeClass.getCommodityNodes().get(l);
-								int percentage = commonWordsCount(title,
-										treeCommodity.getCommodityTitle().toLowerCase());
+								String fullTitle = treeSegment.getSegmentTitle() + " " + treeFamily.getFamilyTitle()
+										+ " " + treeClass.getClassTitle() + " " + treeCommodity.getCommodityTitle();
+
+								int percentage = commonWordsCount(title, fullTitle.toLowerCase());
 								if (percentage > maxPercentage) {
 									maxPercentage = percentage;
 									segmentIndex = i;
@@ -96,7 +111,8 @@ public class MappingClass {
 				resultList.add(result);
 
 			} else {
-				Commodity treeCommodity = commodityList.get(index);
+				Class correctClass = sameClass.get(sameClassIndex);
+				Commodity treeCommodity = correctClass.getCommodityNodes().get(sameCommodityIndex);
 				Result result = new Result(avalara.getTaxCode(), title, treeCommodity.getCommodityTitle(),
 						treeCommodity.getCommodityID());
 				resultList.add(result);
