@@ -125,6 +125,8 @@ public class MappingClass {
 
 	public String constructResults() {
 		StringBuilder stringBuilder = new StringBuilder();
+		String categories = "Commodity Title,"+"Commodity ID,"+"Avalara Tax Code,"+"Avalara Description\n";
+		stringBuilder.append(categories);
 		for (Result line : resultList) {
 			stringBuilder.append(line.toString() + "\n");
 		}
